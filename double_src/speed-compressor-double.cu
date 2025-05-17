@@ -53,6 +53,8 @@ static const int TPB = 512;  // threads per block [must be power of 2 and at lea
 #include "../components/d_DIFFMS_8.h"
 #include "../components/d_HCLOG_8.h"
 
+#include "../benchmarker.cuh"
+
 
 // copy (len) bytes from shared memory (source) to global memory (destination)
 // source must we word aligned
@@ -259,11 +261,13 @@ int main(int argc, char* argv [])
   FILE* const fin = fopen(argv[1], "rb");
   fseek(fin, 0, SEEK_END);
   const int fsize = ftell(fin);  assert(fsize > 0);
-  byte* const input = new byte [fsize];
+  byte* input = new byte [fsize];
   fseek(fin, 0, SEEK_SET);
-  const int insize = fread(input, 1, fsize, fin);  assert(insize == fsize);
+  size_t insize = fread(input, 1, fsize, fin);  assert(insize == fsize);
   fclose(fin);
   printf("original size: %d bytes\n", insize);
+
+	custom::resize_buffer_to_n_values<double, byte>(input, insize);
 
   // Check if the third argument is "y" to enable performance analysis
   char* perf_str = argv[3];

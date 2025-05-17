@@ -54,6 +54,7 @@ static const int TPB = 512;  // threads per block [must be power of 2 and at lea
 #include "../components/d_DIFFMS_4.h"
 #include "../components/d_HCLOGa_4.h"
 
+#include "../benchmarker.cuh"
 
 // copy (len) bytes from global memory (source) to shared memory (destination) using separate shared memory buffer (temp)
 // destination and temp must we word aligned, accesses up to CS + 3 bytes in temp
@@ -281,13 +282,17 @@ int main(int argc, char* argv [])
   int ddecsize = 0;
   dtimer.start();
   d_reset<<<1, 1>>>();
+	auto benchmark = custom::Benchmark();
+	benchmark.start();
   d_decode<<<blocks, TPB>>>(d_encoded, d_decoded, d_decsize);
+  cudaMemcpy(&ddecsize, d_decsize, sizeof(int), cudaMemcpyDeviceToHost);
+	benchmark.stop<double, byte>(d_decoded, ddecsize);
+	benchmark.print_compression_ratio(insize, ddecsize);
   cudaDeviceSynchronize();
   double runtime = dtimer.stop();
   CheckCuda(__LINE__);
 
   // get decoded GPU result
-  cudaMemcpy(&ddecsize, d_decsize, sizeof(int), cudaMemcpyDeviceToHost);
   cudaMemcpy(ddecoded, d_decoded, ddecsize, cudaMemcpyDeviceToHost);
   printf("decoded size: %d bytes\n", ddecsize);
   CheckCuda(__LINE__);

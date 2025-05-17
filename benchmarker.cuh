@@ -1,10 +1,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <sstream>
 #include <stdio.h>
 #include <utility>
 
@@ -13,10 +15,7 @@
 
 namespace custom {
 
-constexpr size_t N_VALUES = 102400 * 1024;
-
-// This is the limit for FPCompressor, otherwise we get a segfault
-// constexpr size_t N_VALUES = 70000 * 1024;
+constexpr size_t DEFAULT_N_VECTORS = 102400;
 
 #define CUDA_SAFE_CALL(call)                                                   \
   do {                                                                         \
@@ -187,12 +186,13 @@ __global__ void query_column(const ColumnT column, bool *out,
 
 template <typename T>
 std::pair<T *, size_t> repeat_buffer_to_n_values(T *input_buffer,
-                                                 size_t input_n_values) {
-  T *output_buffer = new T[N_VALUES];
+                                                 const size_t input_n_values,
+                                                 const size_t target_n_values) {
+  T *output_buffer = new T[target_n_values];
 
-  if (input_n_values < N_VALUES) {
+  if (input_n_values < target_n_values) {
     size_t n_filled_values = 0;
-    size_t n_empty_values_column = N_VALUES;
+    size_t n_empty_values_column = target_n_values;
     while (n_empty_values_column != 0) {
       size_t n_values_to_copy = std::min(n_empty_values_column, input_n_values);
       std::memcpy(output_buffer + n_filled_values, input_buffer,
@@ -202,7 +202,7 @@ std::pair<T *, size_t> repeat_buffer_to_n_values(T *input_buffer,
     }
   }
 
-  return std::make_pair(output_buffer, N_VALUES);
+  return std::make_pair(output_buffer, target_n_values);
 }
 
 template <typename T = bool> T *allocate_query_result_buffer() {
@@ -297,16 +297,35 @@ public:
   }
 };
 
+template <typename T>
+T read_env_var(const std::string variable_name, const T default_value) {
+  const char *value = std::getenv(variable_name.c_str());
+
+  const bool variable_not_set = !value;
+  if (variable_not_set) {
+    return default_value;
+  }
+
+  std::istringstream string_stream(value);
+  T result;
+  string_stream >> result;
+  return string_stream.fail() ? default_value : result;
+}
+
 template <typename T, typename input_T>
 void resize_buffer_to_n_values(input_T *&input_buffer,
                                size_t &input_buffer_size) {
+  const size_t n_vectors = read_env_var("N_VECTORS", DEFAULT_N_VECTORS);
+  const size_t n_values = n_vectors * 1024;
+
   T *reinterpreted_input_buffer = reinterpret_cast<double *>(input_buffer);
   size_t reinterpreted_input_buffer_size =
       (input_buffer_size * sizeof(input_T)) / sizeof(T);
 
   std::pair<T *, size_t> resized_buffer =
       internal::repeat_buffer_to_n_values<T>(reinterpreted_input_buffer,
-                                             reinterpreted_input_buffer_size);
+                                             reinterpreted_input_buffer_size,
+                                             n_values);
 
   input_T *reinterpreted_resized_buffer =
       reinterpret_cast<input_T *>(resized_buffer.first);
