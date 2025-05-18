@@ -292,13 +292,21 @@ int main(int argc, char* argv [])
   GPUTimer dtimer;
   int ddecsize = 0;
   dtimer.start();
+
+	//warmup run
   d_reset<<<1, 1>>>();
+  d_decode<<<blocks, TPB>>>(d_encoded, d_decoded, d_decsize);
+  cudaMemcpy(&ddecsize, d_decsize, sizeof(int), cudaMemcpyDeviceToHost);
+  d_reset<<<1, 1>>>();
+  cudaDeviceSynchronize();
+
 	auto benchmark = custom::Benchmark();
 	benchmark.start();
   d_decode<<<blocks, TPB>>>(d_encoded, d_decoded, d_decsize);
   cudaMemcpy(&ddecsize, d_decsize, sizeof(int), cudaMemcpyDeviceToHost);
 	benchmark.stop<double, byte>(d_decoded, ddecsize);
 	benchmark.print_compression_ratio(insize, ddecsize);
+
   cudaDeviceSynchronize();
   double runtime = dtimer.stop();
   CheckCuda(__LINE__);

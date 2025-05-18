@@ -325,10 +325,11 @@ def bench_fpcompress(output_dir: str, profiler):
             decompress_executable = f"./{float_type}_src/bin/{alg_type}-gpu-decompress"
 
             for file in files:
+                file_param = format_file_parameter(os.path.basename(file).split(".")[0])
                 for i in range(1, args.number_sampling_runs + 1):
                     out = os.path.join(
                         output_dir,
-                        f"fpcompressor-{float_type}-{alg_type}-{format_file_parameter(os.path.basename(file))}-{i}-compress",
+                        f"fpcompressor-compress-{float_type}-{alg_type}-{file_param}-{n_vecs}-{i}",
                     )
                     compressed_file_path = "/tmp/compressed"
                     bin_parameters = convert_list_to_str(
@@ -346,7 +347,7 @@ def bench_fpcompress(output_dir: str, profiler):
 
                     out = os.path.join(
                         output_dir,
-                        f"fpcompressor-{float_type}-{alg_type}-{format_file_parameter(os.path.basename(file))}-{i}-decompress",
+                        f"fpcompressor-decompress-{float_type}-{alg_type}-{file_param}-{n_vecs}-{i}-decompress",
                     )
 
                     decompressed_file_path = "/tmp/decompressed"

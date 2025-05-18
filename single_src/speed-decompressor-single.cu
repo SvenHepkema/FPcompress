@@ -282,6 +282,13 @@ int main(int argc, char* argv [])
   int ddecsize = 0;
   dtimer.start();
   d_reset<<<1, 1>>>();
+
+	// Warmup Run
+  d_decode<<<blocks, TPB>>>(d_encoded, d_decoded, d_decsize);
+  cudaMemcpy(&ddecsize, d_decsize, sizeof(int), cudaMemcpyDeviceToHost);
+  d_reset<<<1, 1>>>();
+  cudaDeviceSynchronize();
+
 	auto benchmark = custom::Benchmark();
 	benchmark.start();
   d_decode<<<blocks, TPB>>>(d_encoded, d_decoded, d_decsize);
@@ -289,6 +296,7 @@ int main(int argc, char* argv [])
 	benchmark.stop<double, byte>(d_decoded, ddecsize);
 	benchmark.print_compression_ratio(insize, ddecsize);
   cudaDeviceSynchronize();
+
   double runtime = dtimer.stop();
   CheckCuda(__LINE__);
 

@@ -291,9 +291,10 @@ public:
 
   void print_compression_ratio(const size_t compressed_size,
                                const size_t decompressed_size) {
+		const double compression_ratio = static_cast<double>(decompressed_size) / static_cast<double>(compressed_size);
+
     fprintf(stdout, "GREPTAG[COMPRESSION_RATIO];%f\n",
-            static_cast<double>(decompressed_size) /
-                static_cast<double>(compressed_size));
+            compression_ratio);
   }
 };
 
