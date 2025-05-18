@@ -139,9 +139,28 @@ def collect_files_into_df(
 
 
 def process_compressors(input_dir: str) -> tuple[str, pl.DataFrame]:
-    return "fpcompressors.csv", collect_files_into_df(
+    df = collect_files_into_df(
         input_dir, "fpcompressor-decompress", convert_compressors_file_to_df
     )
+
+    desired_order = [
+        "return_code",
+        "avg_bits_per_value",
+        "avg_exceptions_per_vector",
+        "kernel",
+        "compressor",
+        "file",
+        "n_bytes",
+        "duration_ms",
+        "compression_ratio",
+        "data_type",
+        "n_vecs",
+        "sample_run"
+    ]
+
+    df = df.select(desired_order)
+
+    return "fpcompressors.csv", df
 
 
 def main(args):
