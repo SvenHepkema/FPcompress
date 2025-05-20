@@ -199,14 +199,14 @@ def does_file_exist(file_path: str) -> bool:
 
 def execute_command(
     command: str, out: str, save_stderr: bool = False, append_signal: bool = False
-):
+) -> bool:
     if args.only_new_runs and does_file_exist(out):
         logging.debug(f"Skipping command, output file exists already: {out}")
         return
 
     if args.dry_run:
         print(command, file=sys.stderr)
-        return
+        return True
 
     stopwatch: Stopwatch = Stopwatch().start()
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -219,7 +219,7 @@ def execute_command(
 
         if args.exit_non_zero_exit_code:
             exit(0)
-        return
+        return False
 
     if out:
         to_write = result.stderr if save_stderr else result.stdout
@@ -229,6 +229,8 @@ def execute_command(
         with open(out, "w") as f:
             f.write(to_write)
 
+    return True
+
 
 class NoProfiler:
     def benchmark_command(
@@ -237,8 +239,8 @@ class NoProfiler:
         out: str,
         save_stderr: bool = False,
         append_signal: bool = False,
-    ) -> None:
-        execute_command(
+    ) -> bool:
+        return execute_command(
             command,
             out,
             save_stderr=save_stderr,
@@ -253,8 +255,8 @@ class NCUProfiler:
         out: str,
         save_stderr: bool = False,
         append_signal: bool = False,
-    ) -> None:
-        execute_command(
+    ) -> bool:
+        return execute_command(
             f"ncu --csv {command}",
             out,
             save_stderr=save_stderr,
@@ -273,18 +275,18 @@ class NVVPProfiler:
         out: str,
         save_stderr: bool = False,
         append_signal: bool = False,
-    ) -> None:
+    ) -> bool:
         command = f"{NVVP_PATH} --print-gpu-trace {command}"
         metrics = None
         if metrics is not None:
-            execute_command(
+            return execute_command(
                 "sudo " + command + self._create_metrics_parameter(metrics),
                 out,
                 save_stderr,
                 append_signal=append_signal,
             )
         else:
-            execute_command(command, out, save_stderr, append_signal=append_signal)
+            return execute_command(command, out, save_stderr, append_signal=append_signal)
 
 
 def get_profiler(args):
@@ -307,10 +309,13 @@ def convert_list_to_str(values: list[Any]) -> list[str]:
 
 def bench_fpcompress(output_dir: str, profiler):
     n_vecs = 25600
-    float_files = get_all_files_in_dir("data/float")
-    double_files = get_all_files_in_dir("data/double")
+    #float_files = get_all_files_in_dir("~/data/float")
+    #float_files = get_all_files_in_dir("../../data/float")
+    float_files = []
+    double_files = get_all_files_in_dir("../../data/double")
 
-    for alg_type in ["speed", "ratio"]:
+    #for alg_type in ["speed", "ratio"]:
+    for alg_type in ["ratio"]:
         for files, float_type in zip(
             [
                 float_files,
@@ -336,7 +341,7 @@ def bench_fpcompress(output_dir: str, profiler):
                         [file, compressed_file_path, "y"]
                     )
 
-                    profiler.benchmark_command(
+                    successful = profiler.benchmark_command(
                         f"N_VECTORS={n_vecs} "
                         + compress_executable
                         + " "
@@ -344,6 +349,9 @@ def bench_fpcompress(output_dir: str, profiler):
                         out=out,
                         append_signal=True,
                     )
+
+                    if not successful:
+                       break 
 
                     out = os.path.join(
                         output_dir,

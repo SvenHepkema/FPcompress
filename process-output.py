@@ -118,7 +118,7 @@ def convert_compressors_file_to_df(file: str) -> pl.DataFrame:
     df = read_compressors_output_as_df(file)
     df = df.with_columns(
         pl.lit("f64" if is_double else "f32").alias("data_type"),
-        pl.lit(f"fpcompressor-{params[3]}").alias("compressor"),
+        pl.lit(f"{params[2]}-fpcompressor-{params[3]}").alias("compressor"),
         pl.lit(params[4]).alias("file"),
         pl.lit(params[5]).alias("n_vecs"),
         pl.lit(int(params[5]) * 1024 * (int(is_double) + 1) * 4).alias("n_bytes"),

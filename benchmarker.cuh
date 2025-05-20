@@ -316,12 +316,17 @@ T read_env_var(const std::string variable_name, const T default_value) {
 template <typename T, typename input_T>
 void resize_buffer_to_n_values(input_T *&input_buffer,
                                size_t &input_buffer_size) {
+	/*
   const size_t n_vectors = read_env_var("N_VECTORS", DEFAULT_N_VECTORS);
-  const size_t n_values = n_vectors * 1024;
+  size_t n_values = n_vectors * 1024;
 
   T *reinterpreted_input_buffer = reinterpret_cast<double *>(input_buffer);
   size_t reinterpreted_input_buffer_size =
       (input_buffer_size * sizeof(input_T)) / sizeof(T);
+
+	if (n_values == 0) {
+		n_values = reinterpreted_input_buffer_size;
+	}
 
   std::pair<T *, size_t> resized_buffer =
       internal::repeat_buffer_to_n_values<T>(reinterpreted_input_buffer,
@@ -339,6 +344,7 @@ void resize_buffer_to_n_values(input_T *&input_buffer,
   // on the CPU for these GPU benchmarks is not catastrophic
   input_buffer = reinterpreted_resized_buffer;
   input_buffer_size = reinterpreted_resized_buffer_size;
+	*/
 }
 
 } // namespace custom
